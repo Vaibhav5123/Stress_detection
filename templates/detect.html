@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <!-- Basic -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <!-- Mobile Metas -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>Stress Detection</title>
+
+  <!-- OwlCarousel -->
+  <link rel="stylesheet" type="text/css"
+    href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css" />
+
+  <!-- Bootstrap and Custom Styles -->
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='bootstrap.css')}}" />
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='font-awesome.min.css')}}" />
+  <link href="{{ url_for('static',filename='style.css')}}" rel="stylesheet" />
+  <link href="{{ url_for('static',filename='responsive.css')}}" rel="stylesheet" />
+
+  <style>
+    .gauge {
+      width: 100%;
+      max-width: 400px;
+      font-family: "Roboto", sans-serif;
+      font-size: 36px;
+      color: #004033;
+    }
+
+    .gauge__body {
+      width: 100%;
+      height: 0;
+      padding-bottom: 50%;
+      background: #b4c0be;
+      position: relative;
+      border-top-left-radius: 100% 200%;
+      border-top-right-radius: 100% 200%;
+      overflow: hidden;
+    }
+
+    .gauge__fill {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: inherit;
+      height: 100%;
+      background: #009578;
+      transform-origin: center top;
+      transform: rotate(0.25turn);
+      transition: transform 0.2s ease-out;
+    }
+
+    .gauge__cover {
+      width: 75%;
+      height: 150%;
+      background: #D1E3FF;
+      border-radius: 50%;
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 25%;
+      box-sizing: border-box;
+      font-size: 24px;
+    }
+  </style>
+
+  <script>
+    // Set gauge UI
+    function setGaugeValue(gauge, value) {
+      if (value < 0 || value > 1) return;
+
+      const fillElement = gauge.querySelector(".gauge__fill");
+      const coverElement = gauge.querySelector(".gauge__cover");
+
+      fillElement.style.transform = `rotate(${value / 2}turn)`;
+
+      if (value === 1) {
+        fillElement.style.background = "red";
+        coverElement.textContent = "Stressed!";
+        coverElement.style.color = "red";
+      } else {
+        fillElement.style.background = "green";
+        coverElement.textContent = "Non-stressed!";
+        coverElement.style.color = "green";
+      }
+    }
+
+    // Fetch data from ThingSpeak and send to backend
+    async function displayPrediction() {
+      try {
+        const response = await fetch('https://api.thingspeak.com/channels/2860070/feeds/last.json?api_key=GBMYZ8QPSNYC4WOO');
+        const data = await response.json();
+
+        const body_temperature = parseFloat(data.field2);
+        const blood_oxygen = parseFloat(data.field3);
+        const heart_rate = parseFloat(data.field4);
+
+        const predictRes = await fetch('/predict', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            body_temperature,
+            blood_oxygen,
+            heart_rate
+          })
+        });
+
+        const result = await predictRes.json();
+        const prediction = result.prediction; // 1 for stressed, 0 for non-stressed
+
+        const gaugeElement = document.querySelector(".gauge");
+        setGaugeValue(gaugeElement, prediction);
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+
+    // Call on page load
+    document.addEventListener("DOMContentLoaded", displayPrediction);
+  </script>
+</head>
+
+<body>
+  <div class="hero_area">
+    <!-- Header -->
+    <header class="header_section">
+      <div class="header_bottom">
+        <div class="container-fluid">
+          <nav class="navbar navbar-expand-lg custom_nav-container ">
+            <a class="navbar-brand" href="index.html">
+              <span>Stress Management</span>
+            </a>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <!-- Gauge Section -->
+    <section class="slider_section ">
+      <div class="container ">
+        <div class="row">
+          <div class="col-md-6 ">
+            <div class="gauge">
+              <div class="gauge__body">
+                <div class="gauge__fill"></div>
+                <div class="gauge__cover"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="img-box">
+              <img src="images/slider-img.png" alt="" style="max-width:100%;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer_section">
+    <div class="container">
+      <p>Stress Detection and Management</p>
+    </div>
+  </footer>
+
+  <!-- JS Files -->
+  <script src="js/jquery-3.4.1.min.js"></script>
+  <script src="js/bootstrap.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+  <script src="js/custom.js"></script>
+</body>
+
+</html>

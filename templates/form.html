@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="keywords" content="" />
+  <meta name="description" content="" />
+  <meta name="author" content="" />
+  <title>Stress Detection</title>
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css" />
+
+  <!-- Local Static CSS via Flask -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='font-awesome.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}" />
+
+  <!-- Inline Custom Styles -->
+  <style>
+    .gauge {
+      width: 100%;
+      max-width: 400px;
+      font-family: "Roboto", sans-serif;
+      font-size: 36px;
+      color: #004033;
+    }
+    .gauge__body {
+      width: 100%;
+      height: 0;
+      padding-bottom: 50%;
+      background: #b4c0be;
+      position: relative;
+      border-top-left-radius: 100% 200%;
+      border-top-right-radius: 100% 200%;
+      overflow: hidden;
+    }
+    .gauge__fill {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: inherit;
+      height: 100%;
+      background: #009578;
+      transform-origin: center top;
+      transform: rotate(0.25turn);
+      transition: transform 0.2s ease-out;
+    }
+    .gauge__cover {
+      width: 75%;
+      height: 150%;
+      background: #D1E3FF;
+      border-radius: 50%;
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 25%;
+      box-sizing: border-box;
+      font-size: 24px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="header_section" >
+    <div class="header_bottom">
+      <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg custom_nav-container">
+          <a class="navbar-brand" href="{{ url_for('home') }}">
+            <span>Stress Management</span>
+          </a>
+          <button class="navbar-toggler" type="button" data-toggle="collapse"
+                  data-target="#navbarSupportedContent">
+            <span class=""> </span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <!-- Add links if needed -->
+          </div>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="hero_area" style="padding-top: 3%;">
+    <section class="slider_section">
+      <div class="container">
+        <div class="row">
+          <!-- Form Section -->
+          <div class="col-md-6">
+            <div class="form-container">
+              <h2>Latest Sensor Data</h2>
+              <label>Body Temperature:</label>
+              <input type="text" id="body_temperature"><br><br>
+
+              <label>Oxygen Level:</label>
+              <input type="text" id="blood_oxygen"><br><br>
+
+              <label>Heart Rate:</label>
+              <input type="text" id="heart_rate"><br><br>
+
+              <button onclick="getPrediction()">Predict Stress Level</button>
+              <div id="result" style="margin-top: 10px;"></div>
+
+              <!-- Stress Level Gauge -->
+              <div class="gauge" id="stressGauge" style="display: none;">
+                <div class="gauge__body">
+                  <div class="gauge__fill"></div>
+                  <div class="gauge__cover">0%</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Image Section -->
+          <div class="col-md-6">
+            <div class="img-box">
+              <img src="{{ url_for('static', filename='images/slider-img.png') }}" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer_section">
+    <div class="container">
+      <p>Stress Detection and Management</p>
+    </div>
+  </footer>
+
+  <!-- JavaScript Files -->
+  <script src="{{ url_for('static', filename='js/jquery-3.4.1.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/custom.js') }}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCh39n5U-4IoWpsVGUHWdqB6puEkhRLdmI&callback=myMap"></script>
+
+  <!-- Stress Detection Script -->
+  <script>
+    // Set Gauge Value
+    function setGaugeValue(gauge, value) {
+      if (value < 0 || value > 1) return;
+
+      const fillElement = gauge.querySelector(".gauge__fill");
+      const coverElement = gauge.querySelector(".gauge__cover");
+
+      // fillElement.style.transform = `rotate(${value / 2}turn)`;
+
+      if (value === 1) {
+        fillElement.style.background = "red";
+        coverElement.textContent = "Stressed!";
+        coverElement.style.color = "red";
+      } else {
+        fillElement.style.background = "green";
+        coverElement.textContent = "Not Stressed!";
+        coverElement.style.color = "green";
+      }
+    }
+
+    // Load Sensor Data from ThingSpeak
+    async function loadSensorData() {
+      try {
+        const response = await fetch('https://api.thingspeak.com/channels/2860070/feeds/last.json?api_key=GBMYZ8QPSNYC4WOO');
+        const data = await response.json();
+
+        document.getElementById('body_temperature').value = parseFloat(data.field2);
+        document.getElementById('blood_oxygen').value = parseFloat(data.field3);
+        document.getElementById('heart_rate').value = parseFloat(data.field4);
+      } catch (err) {
+        console.error('Error loading sensor data:', err);
+        document.getElementById('result').innerText = "Error fetching sensor data.";
+      }
+    }
+
+    // Get Prediction from Backend
+    async function getPrediction() {
+      const body_temperature = parseFloat(document.getElementById('body_temperature').value);
+      const blood_oxygen = parseFloat(document.getElementById('blood_oxygen').value);
+      const heart_rate = parseFloat(document.getElementById('heart_rate').value);
+
+      try {
+        const response = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body_temperature, blood_oxygen, heart_rate })
+        });
+
+        const result = await response.json();
+
+        const gaugeElement = document.getElementById('stressGauge');
+        gaugeElement.style.display = 'block';
+        setGaugeValue(gaugeElement, result.prediction);
+
+        document.getElementById('result').innerText =
+          result.prediction === 1 ? "Prediction: Stressed" : "Prediction: Not Stressed";
+      } catch (error) {
+        console.error('Prediction error:', error);
+        document.getElementById('result').innerText = "Error during prediction.";
+      }
+    }
+
+    // On Page Load
+    document.addEventListener("DOMContentLoaded", function () {
+      loadSensorData();
+      setInterval(loadSensorData, 10000*6); // Refresh sensor data every 1 min
+    });
+  </script>
+</body>
+</html>

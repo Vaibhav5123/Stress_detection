@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stress Level Predictor</title>
+</head>
+<body>
+    <h2>Stress Level Prediction</h2>
+
+    <p><strong>Latest Sensor Values from ThingSpeak:</strong></p>
+
+    <label>Body Temperature:</label>
+    <input type="text" id="body_temperature"><br><br>
+
+    <label>Oxygen Level:</label>
+    <input type="text" id="blood_oxygen" ><br><br>
+
+    <label>Heart Rate:</label>
+    <input type="text" id="heart_rate" ><br><br>
+
+    <button onclick="getPrediction()">Predict Stress Level</button>
+
+    <h3 id="result">Waiting for user action...</h3>
+
+    <script>
+        // Fetch data from ThingSpeak and populate fields
+        async function loadSensorData() {
+            try {
+                const response = await fetch('https://api.thingspeak.com/channels/2860070/feeds/last.json?api_key=GBMYZ8QPSNYC4WOO');
+                const data = await response.json();
+
+                document.getElementById('body_temperature').value = parseFloat(data.field2);
+                document.getElementById('blood_oxygen').value = parseFloat(data.field3);
+                document.getElementById('heart_rate').value = parseFloat(data.field4);
+            } catch (err) {
+                console.error('Error loading sensor data:', err);
+                document.getElementById('result').innerText = "Error fetching sensor data.";
+            }
+        }
+
+        // Send data to backend only when user clicks
+        async function getPrediction() {
+            const body_temperature = parseFloat(document.getElementById('body_temperature').value);
+            const blood_oxygen = parseFloat(document.getElementById('blood_oxygen').value);
+            const heart_rate = parseFloat(document.getElementById('heart_rate').value);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        body_temperature,
+                        blood_oxygen,
+                        heart_rate
+                    })
+                });
+
+                const result = await response.json();
+                document.getElementById('result').innerText =
+                    result.prediction === 1 ? "Prediction: Stressed" : "Prediction: Not Stressed";
+            } catch (error) {
+                console.error('Prediction error:', error);
+                document.getElementById('result').innerText = "Error during prediction.";
+            }
+        }
+
+        // Load sensor data every 10 seconds but don’t auto-predict
+        loadSensorData();
+        setInterval(loadSensorData, 10000);
+    </script>
+</body>
+
+</html>
